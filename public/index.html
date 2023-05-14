@@ -1,0 +1,116 @@
+<html lang="en">
+<head>
+	<base target="_top">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Eindhoven online</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <style>
+		html, body {
+			height: 100%;
+			margin: 0;
+		}
+		.leaflet-container {
+			height: 100vh;
+			width: 100%;
+			max-width: 100%;
+			max-height: 100%;
+		}
+        #map {
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+	</style>
+
+</head>
+
+
+<div id="map"></div>
+<script>
+
+	const map = L.map('map').setView([51.439751, 5.477715], 13);
+
+	const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		maxZoom: 19,
+		attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+	}).addTo(map);
+
+	const trainPopup = L.popup({maxWidth: "400"});
+
+	function padTo2Digits(num) {
+		return String(num).padStart(2, '0');
+	}
+
+	const popup = L.popup();
+
+    window.addEventListener('resize', function() {
+    map.invalidateSize();
+    });
+
+	async function fetchDepartures() {
+		const response = await fetch("/api/departures");
+		const data = await response.json();
+		
+		return content;
+	}
+
+	function formatDate(date) {
+		const a = new Date(date);
+		return `${padTo2Digits(a.getHours())}:${padTo2Digits(a.getMinutes())}`;
+	}
+
+	function createTrainPopup() {
+		axios.get("/api/departures")
+		.then(response => {
+			const departures = response.data;
+			
+			const rows = departures.slice(0, 5).map(x => `<tr><td>${x['direction']} </td> <td> ${x['actualTrack']} </td> <td> ${formatDate(x['plannedDateTime'])} </td></tr>`).join('');
+
+			const popupContent = `
+				<h3>Train Departures</h3>
+				<table class="table">
+				<thead>
+				<tr>
+					<th>Direction</th>
+					<th>Track</th>
+					<th>Time</th>
+				</tr>
+				</thead>
+				<tbody>${rows}</tbody>
+				</table>
+				<p>NOTE: Showing only first 5 departures!</p>
+			`;
+			trainPopup.setContent(popupContent);
+			// trainPopup.openPopup();
+			const marker = L.marker([51.4433326721191, 5.48138904571533]).addTo(map)
+			.bindPopup(trainPopup).openPopup();
+		})
+		.catch(error => {
+			console.error(error);
+		});
+	}
+		
+	createTrainPopup();
+
+	
+	// axios.get("/Spoorkaart_API_-_spoorkaart-1684060610244.json")
+	axios.get("/rails.json")
+		.then(response => {
+			L.geoJSON(response.data).addTo(map);
+		})
+		.catch(error => {
+			console.log(error);
+		})
+	
+</script>
+
+
+</body>
+</html>
